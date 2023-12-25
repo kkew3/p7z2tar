@@ -117,12 +117,19 @@ def make_parser():
         '--compressed',
         choices=['gz', 'bz2', 'xz'],
         help='write to /dev/stdout compressed stream directly')
-    parser.add_argument('archive_file', metavar='ARCHIVE_FILE')
+    parser.add_argument(
+        'archive_files',
+        metavar='ARCHIVE_FILE',
+        nargs='+',
+        help=('if more than one ARCHIVE_FILEs are provided, '
+              'the tar stream will be concatenated, and you will need to '
+              'ensure yourself that the ARCHIVE_FILEs contain disjoint file '
+              'paths'))
     return parser
 
 
 def extract_to_stdout(
-    archive_file: str,
+    archive_files: ty.List[str],
     files_from: ty.Optional[str],
     show_progress: bool,
     compressed: ty.Optional[str],
@@ -138,8 +145,10 @@ def extract_to_stdout(
     if show_progress and files_from_list:
         total = len(files_from_list)
     elif show_progress:
-        with libarchive.file_reader(archive_file) as z:
-            total = sum(1 for _ in z)
+        total = 0
+        for file in archive_files:
+            with libarchive.file_reader(file) as z:
+                total += sum(1 for _ in z)
     else:
         total = 0
 
@@ -147,27 +156,32 @@ def extract_to_stdout(
         compressed = ''
     mode = f'w|{compressed}'
 
-    with tqdm(desc='7z2tar', total=total, disable=not show_progress) as prog, \
-         libarchive.file_reader(archive_file) as z, \
+    with tqdm(desc='p7z2tar', total=total, disable=not show_progress) as prog, \
          tarfile.open(mode=mode, fileobj=sys.stdout.buffer) as tar:
         if files_from_list:
-            for entry in z:
-                if str(entry) not in files_from_list:
-                    prog.update()
-                    continue
-                ti = tarinfo_from_libarchive_entry(entry)
-                tar.addfile(ti, ArchiveEntryBlocks(iter(entry.get_blocks())))
-                prog.update()
+            for file in archive_files:
+                with libarchive.file_reader(file) as z:
+                    for entry in z:
+                        if str(entry) not in files_from_list:
+                            prog.update()
+                            continue
+                        ti = tarinfo_from_libarchive_entry(entry)
+                        tar.addfile(
+                            ti, ArchiveEntryBlocks(iter(entry.get_blocks())))
+                        prog.update()
         else:
-            for entry in z:
-                ti = tarinfo_from_libarchive_entry(entry)
-                tar.addfile(ti, ArchiveEntryBlocks(iter(entry.get_blocks())))
-                prog.update()
+            for file in archive_files:
+                with libarchive.file_reader(file) as z:
+                    for entry in z:
+                        ti = tarinfo_from_libarchive_entry(entry)
+                        tar.addfile(
+                            ti, ArchiveEntryBlocks(iter(entry.get_blocks())))
+                        prog.update()
 
 
 def main():
     args = make_parser().parse_args()
-    extract_to_stdout(args.archive_file, args.files_from, args.show_progress,
+    extract_to_stdout(args.archive_files, args.files_from, args.show_progress,
                       args.compressed)
 
 

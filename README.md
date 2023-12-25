@@ -57,25 +57,31 @@ p7z2tar.py --help
 Quoted below:
 
 ```
-usage: p7z2tar.py [-h] [-p] [-T FILES_FROM] [-Z {gz,bz2,xz}] ARCHIVE_FILE
+usage: p7z2tar.py [-h] [-p] [-T FILES_FROM] [-Z {gz,bz2,xz}]
+                  ARCHIVE_FILE [ARCHIVE_FILE ...]
 
 Write 7z file to /dev/stdout as a tar stream.
 
 positional arguments:
-  ARCHIVE_FILE
+  ARCHIVE_FILE          if more than one ARCHIVE_FILEs are provided, the
+                        tar stream will be concatenated, and you will
+                        need to ensure yourself that the ARCHIVE_FILEs
+                        contain disjoint file paths
 
 options:
   -h, --help            show this help message and exit
-  -p, --show-progress   note that an extra iteration over the 7z archive is
-                        required to fetch the number of files in it, unless
-                        `-T <file>` is specified
+  -p, --show-progress   note that an extra iteration over the 7z archive
+                        is required to fetch the number of files in it,
+                        unless `-T <file>` is specified
   -T FILES_FROM, --files-from FILES_FROM
-                        extract paths in the archive only from this list (one
-                        per line), with `-` means /dev/stdin; note that even
-                        if the paths are given from /dev/stdin, all paths are
-                        read into memory before starting to stream the archive
+                        extract paths in the archive only from this list
+                        (one per line), with `-` means /dev/stdin; note
+                        that even if the paths are given from /dev/stdin,
+                        all paths are read into memory before starting to
+                        stream the archive
   -Z {gz,bz2,xz}, --compressed {gz,bz2,xz}
                         write to /dev/stdout compressed stream directly
+
 ```
 
 Example:
